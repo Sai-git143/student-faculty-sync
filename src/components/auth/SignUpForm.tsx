@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -16,24 +18,38 @@ export function SignUpForm() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            role,
+          },
         },
       });
 
-      if (error) throw error;
+      if (signUpError) throw signUpError;
+
+      // Create profile after successful signup
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: (await supabase.auth.getUser()).data.user?.id,
+            role,
+          },
+        ]);
+
+      if (profileError) throw profileError;
 
       toast({
         title: "Success",
-        description: "Please check your email to confirm your account.",
+        description: "Please check your email to verify your account.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create account. Please try again.",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       });
     } finally {
@@ -46,7 +62,7 @@ export function SignUpForm() {
       <div>
         <Input
           type="email"
-          placeholder="Email"
+          placeholder="University Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -60,6 +76,18 @@ export function SignUpForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+      </div>
+      <div>
+        <Select value={role} onValueChange={setRole}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select your role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="student">Student</SelectItem>
+            <SelectItem value="faculty">Faculty</SelectItem>
+            <SelectItem value="alumni">Alumni</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Creating account..." : "Create Account"}

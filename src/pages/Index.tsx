@@ -35,6 +35,11 @@ const Index = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Your central hub for university discussions, events, and collaboration.
           </p>
+          <div>
+            <Button asChild>
+              <a href="/auth">Get Started</a>
+            </Button>
+          </div>
         </section>
 
         <section className="grid md:grid-cols-3 gap-6 mt-8">

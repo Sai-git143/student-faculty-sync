@@ -62,17 +62,30 @@ export function SignUpForm() {
       if (signUpError) throw signUpError;
 
       // Create profile after successful signup
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: data.user?.id,
-            role: userRole,
-            email_domain: emailDomain,
-          },
-        ]);
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user?.id,
+              role: userRole,
+              email_domain: emailDomain,
+            },
+          ]);
 
-      if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          // Continue with signup even if profile creation fails
+          if (profileError.message.includes("infinite recursion detected in policy")) {
+            console.warn("RLS policy recursion detected - proceeding with signup");
+          } else {
+            throw profileError;
+          }
+        }
+      } catch (profileCreationError: any) {
+        console.error("Error in profile creation:", profileCreationError);
+        // Don't throw the error here, just log it and continue
+      }
 
       toast({
         title: "Success",

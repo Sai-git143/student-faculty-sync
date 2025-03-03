@@ -312,6 +312,30 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_bot: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_bot?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_bot?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -334,25 +358,31 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          email_domain: string | null
+          email_verified: boolean | null
           full_name: string | null
           id: string
-          role: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          email_domain?: string | null
+          email_verified?: boolean | null
           full_name?: string | null
           id: string
-          role?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          email_domain?: string | null
+          email_verified?: boolean | null
           full_name?: string | null
           id?: string
-          role?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           username?: string | null
         }
         Relationships: []
@@ -386,7 +416,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "student" | "faculty" | "admin" | "club_coordinator" | "alumni"
     }
     CompositeTypes: {
       [_ in never]: never

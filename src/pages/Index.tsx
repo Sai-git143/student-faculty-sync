@@ -8,12 +8,27 @@ import { supabase } from "@/lib/supabase";
 
 export default function Index() {
   const navigate = useNavigate();
-  const { data: session } = useQuery({
+  const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       return session;
     },
+  });
+
+  const { data: userProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ['userProfile', session?.user.id],
+    queryFn: async () => {
+      if (!session?.user.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!session?.user.id
   });
 
   return (
@@ -24,7 +39,9 @@ export default function Index() {
           Connect, learn, and grow with your university community
         </p>
 
-        {!session ? (
+        {sessionLoading || profileLoading ? (
+          <div className="text-center p-4">Loading...</div>
+        ) : !session ? (
           <div className="space-x-4">
             <Button onClick={() => navigate("/auth")}>Sign In</Button>
             <Button variant="outline" onClick={() => navigate("/auth")}>
@@ -32,20 +49,44 @@ export default function Index() {
             </Button>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            <Button onClick={() => navigate("/discussions")}>
-              Join Discussions
-            </Button>
-            <Button onClick={() => navigate("/events")}>
-              Browse Events
-            </Button>
-            <Button onClick={() => navigate("/clubs")}>
-              Explore Clubs
-            </Button>
-            <Button onClick={() => navigate("/career")}>
-              Career Opportunities
-            </Button>
-          </div>
+          <>
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold mb-2">
+                Hello, {userProfile?.full_name || userProfile?.username || 'University Member'}
+              </h2>
+              <p className="text-muted-foreground">
+                {userProfile?.role === 'student' && 'Student'}
+                {userProfile?.role === 'faculty' && 'Faculty Member'}
+                {userProfile?.role === 'admin' && 'Administrator'}
+                {userProfile?.role === 'club_coordinator' && 'Club Coordinator'}
+                {userProfile?.role === 'alumni' && 'Alumni'}
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Button onClick={() => navigate("/discussions")}>
+                Join Discussions
+              </Button>
+              <Button onClick={() => navigate("/events")}>
+                Browse Events
+              </Button>
+              <Button onClick={() => navigate("/clubs")}>
+                Explore Clubs
+              </Button>
+              <Button onClick={() => navigate("/career")}>
+                Career Opportunities
+              </Button>
+              {userProfile?.role === 'faculty' && (
+                <Button onClick={() => navigate("/announcements")}>
+                  Manage Announcements
+                </Button>
+              )}
+              {userProfile?.role === 'alumni' && (
+                <Button onClick={() => navigate("/alumni")}>
+                  Alumni Network
+                </Button>
+              )}
+            </div>
+          </>
         )}
       </div>
       <ChatBot />

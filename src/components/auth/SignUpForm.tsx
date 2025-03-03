@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
@@ -12,18 +13,47 @@ export function SignUpForm() {
   const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const validateEmail = (email: string) => {
+    return email.endsWith('@university.edu') || 
+           email.endsWith('@admin.university.edu') ||
+           email.endsWith('@faculty.university.edu');
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    // Validate university email
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please use a valid university email address (@university.edu or @admin.university.edu)",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      // Get the email domain
+      const emailDomain = email.substring(email.indexOf('@'));
+      
+      // Determine appropriate role based on email domain
+      let userRole = role;
+      if (emailDomain === '@admin.university.edu') {
+        userRole = 'admin';
+      } else if (emailDomain === '@faculty.university.edu') {
+        userRole = 'faculty';
+      }
+
+      const { error: signUpError, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            role,
+            role: userRole,
           },
         },
       });
@@ -35,8 +65,9 @@ export function SignUpForm() {
         .from('profiles')
         .insert([
           {
-            id: (await supabase.auth.getUser()).data.user?.id,
-            role,
+            id: data.user?.id,
+            role: userRole,
+            email_domain: emailDomain,
           },
         ]);
 
@@ -46,6 +77,8 @@ export function SignUpForm() {
         title: "Success",
         description: "Please check your email to verify your account.",
       });
+      
+      navigate("/auth");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -62,11 +95,14 @@ export function SignUpForm() {
       <div>
         <Input
           type="email"
-          placeholder="University Email"
+          placeholder="University Email (@university.edu)"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        <p className="text-xs text-muted-foreground mt-1">
+          Use your university email address (@university.edu)
+        </p>
       </div>
       <div>
         <Input
@@ -86,6 +122,7 @@ export function SignUpForm() {
             <SelectItem value="student">Student</SelectItem>
             <SelectItem value="faculty">Faculty</SelectItem>
             <SelectItem value="alumni">Alumni</SelectItem>
+            <SelectItem value="club_coordinator">Club Coordinator</SelectItem>
           </SelectContent>
         </Select>
       </div>

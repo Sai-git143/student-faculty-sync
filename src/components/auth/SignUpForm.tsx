@@ -18,18 +18,19 @@ export function SignUpForm() {
   const validateEmail = (email: string) => {
     return email.endsWith('@university.edu') || 
            email.endsWith('@admin.university.edu') ||
-           email.endsWith('@faculty.university.edu');
+           email.endsWith('@faculty.university.edu') ||
+           email.endsWith('@gmail.com');
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Validate university email
+    // Validate email
     if (!validateEmail(email)) {
       toast({
         title: "Invalid Email",
-        description: "Please use a valid university email address (@university.edu or @admin.university.edu)",
+        description: "Please use a valid email address (@university.edu, @admin.university.edu, or @gmail.com)",
         variant: "destructive",
       });
       setLoading(false);
@@ -95,13 +96,13 @@ export function SignUpForm() {
       <div>
         <Input
           type="email"
-          placeholder="University Email (@university.edu)"
+          placeholder="Email (@university.edu or @gmail.com)"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Use your university email address (@university.edu)
+          Use your university email (@university.edu) or Gmail account (@gmail.com)
         </p>
       </div>
       <div>

@@ -42,20 +42,27 @@ export function SignInForm() {
   };
 
   const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/auth/callback',
         },
-      },
-    });
+      });
 
-    if (error) {
+      if (error) {
+        console.error("Google sign-in error:", error);
+        toast({
+          title: "Error",
+          description: "Google sign-in is not enabled for this project. Please contact the administrator.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Google sign-in exception:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to sign in with Google",
         variant: "destructive",
       });
     }

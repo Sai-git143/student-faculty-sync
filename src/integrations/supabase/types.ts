@@ -312,6 +312,24 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -336,6 +354,27 @@ export type Database = {
           id?: string
           role?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          email: string
+          id: string
+          role: string
+          user_id: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          role: string
+          user_id?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          role?: string
+          user_id?: string | null
         }
         Relationships: []
       }

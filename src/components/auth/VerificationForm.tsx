@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface VerificationFormProps {
   email: string;
@@ -11,6 +12,7 @@ interface VerificationFormProps {
   loading: boolean;
   resendDisabled: boolean;
   countdown: number;
+  errorMessage: string | null;
   onVerify: (e: React.FormEvent) => Promise<void>;
   onResendOtp: () => Promise<void>;
   onBack: () => void;
@@ -23,6 +25,7 @@ export function VerificationForm({
   loading,
   resendDisabled,
   countdown,
+  errorMessage,
   onVerify,
   onResendOtp,
   onBack
@@ -40,6 +43,14 @@ export function VerificationForm({
           </div>
         </div>
       </div>
+      
+      {errorMessage && (
+        <Alert variant="destructive" className="py-2">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      
       <div className="space-y-2">
         <label htmlFor="otp" className="text-sm font-medium">
           Enter verification code

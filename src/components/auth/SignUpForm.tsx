@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { SignUpInitialForm } from "./SignUpInitialForm";
 import { VerificationForm } from "./VerificationForm";
-import { validateEmail, determineRoleFromEmail } from "@/utils/emailValidation";
+import { validateEmail, determineRoleFromEmail, handleOtpError } from "@/utils/emailValidation";
 import { useResendCountdown } from "@/hooks/useResendCountdown";
 
 export function SignUpForm() {
@@ -21,12 +21,16 @@ export function SignUpForm() {
   const { 
     resendDisabled, 
     countdown, 
-    startResendCountdown 
+    errorMessage,
+    startResendCountdown,
+    setResendError,
+    clearError
   } = useResendCountdown();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    clearError();
 
     // Validate email
     if (!validateEmail(email)) {
@@ -66,10 +70,11 @@ export function SignUpForm() {
           description: "An account with this email already exists. Please sign in instead.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
-      // Send OTP for verification
+      // Send OTP for verification - explicitly use OTP-based verification
       const { error: phoneOtpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -86,12 +91,13 @@ export function SignUpForm() {
       });
       startResendCountdown();
     } catch (error: any) {
-      console.error("OTP send error:", error);
+      const errorMsg = handleOtpError(error);
       toast({
         title: "Error",
-        description: error.message || "Failed to send verification code",
+        description: errorMsg,
         variant: "destructive",
       });
+      console.error("OTP send error:", error);
     } finally {
       setLoading(false);
     }
@@ -101,6 +107,8 @@ export function SignUpForm() {
     if (resendDisabled) return;
     
     setLoading(true);
+    clearError();
+    
     try {
       // Try to resend the OTP explicitly with OTP
       const { error: otpError } = await supabase.auth.signInWithOtp({
@@ -118,9 +126,11 @@ export function SignUpForm() {
       });
       startResendCountdown();
     } catch (error: any) {
+      const errorMsg = handleOtpError(error);
+      setResendError(errorMsg);
       toast({
         title: "Error",
-        description: error.message || "Failed to resend verification code",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
@@ -131,6 +141,7 @@ export function SignUpForm() {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    clearError();
 
     try {
       const { error: verifyError } = await supabase.auth.verifyOtp({
@@ -148,11 +159,13 @@ export function SignUpForm() {
       
       navigate("/");
     } catch (error: any) {
+      const errorMsg = error.message || "Failed to verify account";
       toast({
         title: "Error",
-        description: error.message || "Failed to verify account",
+        description: errorMsg,
         variant: "destructive",
       });
+      setResendError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -179,6 +192,7 @@ export function SignUpForm() {
           loading={loading}
           resendDisabled={resendDisabled}
           countdown={countdown}
+          errorMessage={errorMessage}
           onVerify={handleVerifyOtp}
           onResendOtp={handleResendOtp}
           onBack={() => setVerificationStep(false)}

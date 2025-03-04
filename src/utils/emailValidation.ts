@@ -30,3 +30,28 @@ export const determineRoleFromEmail = (email: string, selectedRole: string): str
   
   return selectedRole;
 };
+
+/**
+ * Handles Supabase OTP errors and returns user-friendly messages
+ */
+export const handleOtpError = (error: any): string => {
+  console.error("OTP send error:", error);
+  
+  // Rate limit error
+  if (error.code === "over_email_send_rate_limit") {
+    return error.message || "Too many attempts. Please try again later.";
+  }
+  
+  // Invalid email
+  if (error.message?.includes("invalid format")) {
+    return "Please enter a valid email address.";
+  }
+  
+  // Account already exists
+  if (error.message?.includes("already exists")) {
+    return "An account with this email already exists. Please sign in instead.";
+  }
+  
+  // Default error message
+  return error.message || "Failed to send verification code. Please try again.";
+};

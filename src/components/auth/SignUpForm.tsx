@@ -1,12 +1,12 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { SignUpInitialForm } from "./SignUpInitialForm";
+import { VerificationForm } from "./VerificationForm";
+import { validateEmail, determineRoleFromEmail } from "@/utils/emailValidation";
+import { useResendCountdown } from "@/hooks/useResendCountdown";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
@@ -15,33 +15,14 @@ export function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [verificationStep, setVerificationStep] = useState(false);
   const [otp, setOtp] = useState("");
-  const [resendDisabled, setResendDisabled] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const validateEmail = (email: string) => {
-    return email.endsWith('@university.edu') || 
-           email.endsWith('@admin.university.edu') ||
-           email.endsWith('@faculty.university.edu') ||
-           email.endsWith('@gmail.com');
-  };
-
-  const startResendCountdown = () => {
-    setResendDisabled(true);
-    setCountdown(60);
-    
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setResendDisabled(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  
+  const { 
+    resendDisabled, 
+    countdown, 
+    startResendCountdown 
+  } = useResendCountdown();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,16 +40,9 @@ export function SignUpForm() {
     }
 
     try {
-      // Get the email domain
-      const emailDomain = email.substring(email.indexOf('@'));
-      
       // Determine appropriate role based on email domain
-      let userRole = role;
-      if (emailDomain === '@admin.university.edu') {
-        userRole = 'admin';
-      } else if (emailDomain === '@faculty.university.edu') {
-        userRole = 'faculty';
-      }
+      const userRole = determineRoleFromEmail(email, role);
+      const emailDomain = email.substring(email.indexOf('@'));
 
       // IMPORTANT: Explicitly set type to 'signup' and force OTP
       const { data, error: otpError } = await supabase.auth.signUp({
@@ -187,115 +161,28 @@ export function SignUpForm() {
   return (
     <>
       {!verificationStep ? (
-        <form onSubmit={handleSignUp} className="space-y-4">
-          <div>
-            <Input
-              type="email"
-              placeholder="Email (@university.edu or @gmail.com)"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Use your university email (@university.edu) or Gmail account (@gmail.com)
-            </p>
-          </div>
-          <div>
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Password must be at least 6 characters
-            </p>
-          </div>
-          <div>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select your role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="faculty">Faculty</SelectItem>
-                <SelectItem value="alumni">Alumni</SelectItem>
-                <SelectItem value="club_coordinator">Club Coordinator</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending verification code...
-              </>
-            ) : (
-              "Send Verification Code"
-            )}
-          </Button>
-        </form>
+        <SignUpInitialForm
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          role={role}
+          setRole={setRole}
+          loading={loading}
+          onSubmit={handleSignUp}
+        />
       ) : (
-        <form onSubmit={handleVerifyOtp} className="space-y-4">
-          <div className="bg-muted/50 p-3 rounded-md mb-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <h3 className="text-sm font-medium">Verification code sent</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  We've sent a verification code to {email}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="otp" className="text-sm font-medium">
-              Enter verification code
-            </label>
-            <Input
-              id="otp"
-              type="text"
-              placeholder="6-digit code"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.trim())}
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Verifying...
-              </>
-            ) : (
-              "Verify Email"
-            )}
-          </Button>
-          <div className="flex justify-between items-center mt-4">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setVerificationStep(false)}
-              disabled={loading}
-            >
-              Back
-            </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              onClick={handleResendOtp}
-              disabled={resendDisabled || loading}
-            >
-              {resendDisabled 
-                ? `Resend code in ${countdown}s` 
-                : "Resend code"}
-            </Button>
-          </div>
-        </form>
+        <VerificationForm
+          email={email}
+          otp={otp}
+          setOtp={setOtp}
+          loading={loading}
+          resendDisabled={resendDisabled}
+          countdown={countdown}
+          onVerify={handleVerifyOtp}
+          onResendOtp={handleResendOtp}
+          onBack={() => setVerificationStep(false)}
+        />
       )}
     </>
   );

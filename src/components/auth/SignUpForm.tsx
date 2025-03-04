@@ -70,26 +70,45 @@ export function SignUpForm() {
         userRole = 'faculty';
       }
 
-      // For OTP verification, we'll use signInWithOtp
-      const { data, error: otpError } = await supabase.auth.signInWithOtp({
+      // IMPORTANT: Explicitly set type to 'signup' and force OTP
+      const { data, error: otpError } = await supabase.auth.signUp({
         email,
+        password,
         options: {
-          shouldCreateUser: true,
-          emailRedirectTo: window.location.origin + '/auth/callback',
           data: {
-            password, // Store temporarily to complete signup after verification
             role: userRole,
             email_domain: emailDomain,
-          }
+          },
+          emailRedirectTo: window.location.origin + '/auth/callback'
         }
       });
 
       if (otpError) throw otpError;
 
+      // Check if the user needs to verify their email
+      if (data?.user?.identities?.length === 0) {
+        toast({
+          title: "Account Exists",
+          description: "An account with this email already exists. Please sign in instead.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Send OTP for verification
+      const { error: phoneOtpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false
+        }
+      });
+
+      if (phoneOtpError) throw phoneOtpError;
+
       setVerificationStep(true);
       toast({
         title: "OTP Sent",
-        description: `A verification code has been sent to ${email}. Please check your inbox.`,
+        description: `A verification code has been sent to ${email}. Please check your inbox and spam folder.`,
       });
       startResendCountdown();
     } catch (error: any) {
@@ -109,12 +128,11 @@ export function SignUpForm() {
     
     setLoading(true);
     try {
-      // Try to resend the OTP
+      // Try to resend the OTP explicitly with OTP
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true,
-          emailRedirectTo: window.location.origin + '/auth/callback',
+          shouldCreateUser: false
         }
       });
 
@@ -122,7 +140,7 @@ export function SignUpForm() {
 
       toast({
         title: "OTP Resent",
-        description: "A new verification code has been sent to your email.",
+        description: "A new verification code has been sent to your email. Please check your inbox and spam folder.",
       });
       startResendCountdown();
     } catch (error: any) {
@@ -148,9 +166,6 @@ export function SignUpForm() {
       });
 
       if (verifyError) throw verifyError;
-
-      // After verification, the user should be redirected to auth/callback
-      // where the user profile will be created
       
       toast({
         title: "Success",

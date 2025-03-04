@@ -1,258 +1,249 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Users, BookOpen, Bell, Award } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  status: string;
-}
-
-interface Activity {
-  id: string;
-  type: string;
-  title: string;
-  timestamp: string;
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Calendar, 
+  Book, 
+  Users, 
+  Bell, 
+  BarChart, 
+  Zap,
+  CheckCircle2
+} from "lucide-react";
+import { GamificationSystem } from "@/components/gamification/GamificationSystem";
+import { RealtimeAnnouncements } from "@/components/RealtimeAnnouncements";
 
 export function Dashboard({ userProfile }: { userProfile: any }) {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("overview");
+  const userId = userProfile?.id || '';
   
-  // Mock data for demonstration
-  const upcomingEvents: Event[] = [
-    { id: "1", title: "Science Fair", date: "2023-10-15", status: "upcoming" },
-    { id: "2", title: "Alumni Meetup", date: "2023-10-20", status: "upcoming" },
-    { id: "3", title: "Career Workshop", date: "2023-11-05", status: "upcoming" }
-  ];
-  
-  const recentActivities: Activity[] = [
-    { id: "1", type: "discussion", title: "New post in Computer Science forum", timestamp: "2 hours ago" },
-    { id: "2", type: "announcement", title: "Exam dates announced", timestamp: "1 day ago" },
-    { id: "3", type: "club", title: "Chess Club meeting rescheduled", timestamp: "2 days ago" }
-  ];
-
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
-      <div className="bg-primary/10 p-6 rounded-lg">
-        <h2 className="text-2xl font-semibold mb-2">
-          Welcome back, {userProfile?.full_name || userProfile?.username || 'University Member'}
-        </h2>
-        <p className="text-muted-foreground mb-4">
-          Here's what's happening in your university community today
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Badge variant="outline" className="bg-background/80">
-            <span className="text-primary font-medium">{userProfile?.role || 'Student'}</span>
-          </Badge>
-          {userProfile?.department && (
-            <Badge variant="outline" className="bg-background/80">
-              {userProfile.department}
-            </Badge>
-          )}
-          {userProfile?.year && (
-            <Badge variant="outline" className="bg-background/80">
-              Year {userProfile.year}
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      {/* Main Dashboard Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="activities">Recent Activity</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Upcoming Events
-              </CardTitle>
-              <CardDescription>Your next events and deadlines</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {upcomingEvents.slice(0, 2).map(event => (
-                <div key={event.id} className="flex justify-between items-center py-2 border-b last:border-0">
-                  <div>
-                    <p className="font-medium">{event.title}</p>
-                    <p className="text-sm text-muted-foreground">{event.date}</p>
-                  </div>
-                  <Button variant="outline" size="sm">View</Button>
-                </div>
-              ))}
-              <Button 
-                variant="ghost" 
-                className="w-full mt-2" 
-                size="sm"
-                onClick={() => navigate("/events")}
-              >
-                View all events
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>Latest updates from your community</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentActivities.slice(0, 2).map(activity => (
-                <div key={activity.id} className="flex justify-between items-center py-2 border-b last:border-0">
-                  <div>
-                    <p className="font-medium">{activity.title}</p>
-                    <p className="text-sm text-muted-foreground">{activity.timestamp}</p>
-                  </div>
-                  <Badge variant={
-                    activity.type === "announcement" ? "destructive" : 
-                    activity.type === "discussion" ? "secondary" : 
-                    "outline"
-                  }>
-                    {activity.type}
-                  </Badge>
-                </div>
-              ))}
-              <Button 
-                variant="ghost" 
-                className="w-full mt-2" 
-                size="sm"
-                onClick={() => setActiveTab("activities")}
-              >
-                View all activity
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <Card className="md:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-primary" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Common tasks and actions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col py-4 gap-2"
-                  onClick={() => navigate("/discussions")}
-                >
-                  <Users className="h-6 w-6" />
-                  <span>Join Discussions</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col py-4 gap-2"
-                  onClick={() => navigate("/events")}
-                >
-                  <Calendar className="h-6 w-6" />
-                  <span>Browse Events</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col py-4 gap-2"
-                  onClick={() => navigate("/clubs")}
-                >
-                  <Users className="h-6 w-6" />
-                  <span>Explore Clubs</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col py-4 gap-2"
-                  onClick={() => navigate("/career")}
-                >
-                  <BookOpen className="h-6 w-6" />
-                  <span>Career Resources</span>
-                </Button>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-3/4 space-y-6">
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Upcoming Events
+                    </CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">3</div>
+                    <p className="text-xs text-muted-foreground">
+                      Events this week
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Active Courses
+                    </CardTitle>
+                    <Book className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">5</div>
+                    <p className="text-xs text-muted-foreground">
+                      Current semester
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Engagement Points
+                    </CardTitle>
+                    <Zap className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">324</div>
+                    <p className="text-xs text-muted-foreground">
+                      Level 3 (74% to Level 4)
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="upcoming">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                All Upcoming Events
-              </CardTitle>
-              <CardDescription>Your schedule for the coming weeks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingEvents.map(event => (
-                  <div key={event.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <div>
-                      <p className="font-medium">{event.title}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{event.date}</span>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <RealtimeAnnouncements />
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5" />
+                      Tasks & Deadlines
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5 h-2 w-2 rounded-full bg-blue-500"></div>
+                          <div>
+                            <p className="text-sm font-medium">CS350 Assignment</p>
+                            <p className="text-xs text-muted-foreground">Due in 3 days</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5 h-2 w-2 rounded-full bg-yellow-500"></div>
+                          <div>
+                            <p className="text-sm font-medium">Biology Presentation</p>
+                            <p className="text-xs text-muted-foreground">Due in 1 week</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5 h-2 w-2 rounded-full bg-red-500"></div>
+                          <div>
+                            <p className="text-sm font-medium">History Mid-term</p>
+                            <p className="text-xs text-muted-foreground">Tomorrow at 10 AM</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5 h-2 w-2 rounded-full bg-green-500"></div>
+                          <div>
+                            <p className="text-sm font-medium">Club Meeting</p>
+                            <p className="text-xs text-muted-foreground">Today at 4 PM</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge>
-                        {event.status}
-                      </Badge>
-                      <Button size="sm">Details</Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="upcoming" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Upcoming Events
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-bold">OCT</div>
+                        <div className="text-2xl font-bold">15</div>
+                      </div>
+                      <div>
+                        <h4 className="text-base font-semibold">Career Fair</h4>
+                        <p className="text-sm text-muted-foreground mb-1">10:00 AM - 4:00 PM • Student Center</p>
+                        <p className="text-sm">Meet representatives from 50+ companies hiring for internships and full-time positions.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-bold">OCT</div>
+                        <div className="text-2xl font-bold">18</div>
+                      </div>
+                      <div>
+                        <h4 className="text-base font-semibold">Hackathon Kickoff</h4>
+                        <p className="text-sm text-muted-foreground mb-1">6:00 PM - 8:00 PM • Engineering Building</p>
+                        <p className="text-sm">Join the 48-hour coding challenge with prizes for the most innovative projects.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-bold">OCT</div>
+                        <div className="text-2xl font-bold">21</div>
+                      </div>
+                      <div>
+                        <h4 className="text-base font-semibold">Guest Lecture: AI Ethics</h4>
+                        <p className="text-sm text-muted-foreground mb-1">2:00 PM - 3:30 PM • Auditorium</p>
+                        <p className="text-sm">Distinguished speaker Dr. Emily Chen discusses ethical considerations in artificial intelligence.</p>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="activity" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart className="h-5 w-5" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { action: "Earned 15 points", detail: "For attending Computer Science workshop", time: "Today, 11:23 AM" },
+                      { action: "Submitted assignment", detail: "MATH201: Linear Algebra Problem Set", time: "Yesterday, 9:45 PM" },
+                      { action: "Joined discussion", detail: "Topic: Renewable Energy Solutions", time: "Oct 10, 3:15 PM" },
+                      { action: "Earned badge", detail: "Academic Excellence: Perfect attendance", time: "Oct 9, 12:00 PM" },
+                      { action: "RSVP'd to event", detail: "Fall Concert Series: Jazz Night", time: "Oct 8, 5:30 PM" }
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-start gap-4">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                          <div className="h-2.5 w-2.5 rounded-full bg-primary"></div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{item.action}</p>
+                          <p className="text-xs text-muted-foreground mb-0.5">{item.detail}</p>
+                          <p className="text-xs text-muted-foreground">{item.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
         
-        <TabsContent value="activities">
+        <div className="md:w-1/4 space-y-6">
+          <GamificationSystem userId={userId} />
+          
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                All Recent Activities
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-4 w-4" />
+                Your Clubs
               </CardTitle>
-              <CardDescription>Latest updates from your community</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map(activity => (
-                  <div key={activity.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <div>
-                      <p className="font-medium">{activity.title}</p>
-                      <p className="text-sm text-muted-foreground">{activity.timestamp}</p>
-                    </div>
-                    <div>
-                      <Badge variant={
-                        activity.type === "announcement" ? "destructive" : 
-                        activity.type === "discussion" ? "secondary" : 
-                        "outline"
-                      }>
-                        {activity.type}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+            <CardContent className="space-y-2">
+              <div className="text-sm">
+                <div className="font-medium">Coding Club</div>
+                <div className="text-xs text-muted-foreground">Meeting this Thursday</div>
+              </div>
+              <div className="text-sm">
+                <div className="font-medium">Debate Society</div>
+                <div className="text-xs text-muted-foreground">Competition next week</div>
+              </div>
+              <div className="text-sm">
+                <div className="font-medium">Photography Club</div>
+                <div className="text-xs text-muted-foreground">New exhibition soon</div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

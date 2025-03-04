@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Textarea } from "@/components/ui/textarea";
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
@@ -15,6 +15,8 @@ export function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [verificationStep, setVerificationStep] = useState(false);
   const [otp, setOtp] = useState("");
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -23,6 +25,22 @@ export function SignUpForm() {
            email.endsWith('@admin.university.edu') ||
            email.endsWith('@faculty.university.edu') ||
            email.endsWith('@gmail.com');
+  };
+
+  const startResendCountdown = () => {
+    setResendDisabled(true);
+    setCountdown(60);
+    
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setResendDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -52,13 +70,14 @@ export function SignUpForm() {
         userRole = 'faculty';
       }
 
-      // For OTP verification, we'll use signInWithOtp instead of signUp
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      // For OTP verification, we'll use signInWithOtp
+      const { data, error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + '/auth',
+          shouldCreateUser: true,
+          emailRedirectTo: window.location.origin + '/auth/callback',
           data: {
-            password, // We'll store the password temporarily to complete signup after verification
+            password, // Store temporarily to complete signup after verification
             role: userRole,
             email_domain: emailDomain,
           }
@@ -70,12 +89,46 @@ export function SignUpForm() {
       setVerificationStep(true);
       toast({
         title: "OTP Sent",
-        description: "Please check your email for a verification code.",
+        description: `A verification code has been sent to ${email}. Please check your inbox.`,
       });
+      startResendCountdown();
     } catch (error: any) {
+      console.error("OTP send error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to send verification code",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendDisabled) return;
+    
+    setLoading(true);
+    try {
+      // Try to resend the OTP
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: window.location.origin + '/auth/callback',
+        }
+      });
+
+      if (otpError) throw otpError;
+
+      toast({
+        title: "OTP Resent",
+        description: "A new verification code has been sent to your email.",
+      });
+      startResendCountdown();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend verification code",
         variant: "destructive",
       });
     } finally {
@@ -96,48 +149,9 @@ export function SignUpForm() {
 
       if (verifyError) throw verifyError;
 
-      // After verification, we need to create the user profile
-      try {
-        // Get the email domain to determine role
-        const emailDomain = email.substring(email.indexOf('@'));
-        
-        // Determine appropriate role based on email domain
-        let userRole = role;
-        if (emailDomain === '@admin.university.edu') {
-          userRole = 'admin';
-        } else if (emailDomain === '@faculty.university.edu') {
-          userRole = 'faculty';
-        }
-
-        // Get the user ID after verification
-        const { data: userData } = await supabase.auth.getUser();
-        
-        if (userData?.user?.id) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: userData.user.id,
-                role: userRole,
-                email_domain: emailDomain,
-              },
-            ]);
-
-          if (profileError) {
-            console.error("Profile creation error:", profileError);
-            // Continue with signup even if profile creation fails
-            if (profileError.message.includes("infinite recursion detected in policy")) {
-              console.warn("RLS policy recursion detected - proceeding with signup");
-            } else {
-              throw profileError;
-            }
-          }
-        }
-      } catch (profileCreationError: any) {
-        console.error("Error in profile creation:", profileCreationError);
-        // Don't throw the error here, just log it and continue
-      }
-
+      // After verification, the user should be redirected to auth/callback
+      // where the user profile will be created
+      
       toast({
         title: "Success",
         description: "Your account has been verified successfully.",
@@ -178,7 +192,11 @@ export function SignUpForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Password must be at least 6 characters
+            </p>
           </div>
           <div>
             <Select value={role} onValueChange={setRole}>
@@ -194,35 +212,74 @@ export function SignUpForm() {
             </Select>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Sending verification code..." : "Send Verification Code"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending verification code...
+              </>
+            ) : (
+              "Send Verification Code"
+            )}
           </Button>
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp} className="space-y-4">
-          <div>
+          <div className="bg-muted/50 p-3 rounded-md mb-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+              <div>
+                <h3 className="text-sm font-medium">Verification code sent</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  We've sent a verification code to {email}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="otp" className="text-sm font-medium">
+              Enter verification code
+            </label>
             <Input
+              id="otp"
               type="text"
-              placeholder="Enter the verification code sent to your email"
+              placeholder="6-digit code"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) => setOtp(e.target.value.trim())}
               required
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Check your email for a verification code and enter it here
-            </p>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Verifying..." : "Verify Email"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              "Verify Email"
+            )}
           </Button>
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full" 
-            onClick={() => setVerificationStep(false)}
-            disabled={loading}
-          >
-            Back
-          </Button>
+          <div className="flex justify-between items-center mt-4">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setVerificationStep(false)}
+              disabled={loading}
+            >
+              Back
+            </Button>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={handleResendOtp}
+              disabled={resendDisabled || loading}
+            >
+              {resendDisabled 
+                ? `Resend code in ${countdown}s` 
+                : "Resend code"}
+            </Button>
+          </div>
         </form>
       )}
     </>

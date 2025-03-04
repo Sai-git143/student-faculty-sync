@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 export function SignInForm() {
   const [email, setEmail] = useState("");
@@ -43,18 +44,25 @@ export function SignInForm() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/auth/callback',
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
       if (error) {
         console.error("Google sign-in error:", error);
         toast({
+          title: "Google Sign-In Failed",
+          description: "Make sure Google auth is enabled in your Supabase project.",
+          variant: "destructive",
+        });
+      } else if (!data.url) {
+        toast({
           title: "Error",
-          description: "Google sign-in is not enabled for this project. Please contact the administrator.",
+          description: "Failed to generate Google sign-in URL",
           variant: "destructive",
         });
       }
@@ -65,6 +73,8 @@ export function SignInForm() {
         description: error.message || "Failed to sign in with Google",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,7 +83,7 @@ export function SignInForm() {
       <div>
         <Input
           type="email"
-          placeholder="University Email"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -89,7 +99,14 @@ export function SignInForm() {
         />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing in..." : "Sign In"}
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          "Sign In"
+        )}
       </Button>
       <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
@@ -106,8 +123,16 @@ export function SignInForm() {
         variant="outline"
         className="w-full"
         onClick={handleGoogleSignIn}
+        disabled={loading}
       >
-        Continue with Google
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          "Continue with Google"
+        )}
       </Button>
     </form>
   );

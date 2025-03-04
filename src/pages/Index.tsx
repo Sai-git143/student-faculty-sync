@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { Dashboard } from "@/components/Dashboard";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -33,60 +34,24 @@ export default function Index() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto mt-12 text-center">
-        <h1 className="text-4xl font-bold mb-6">Welcome to University Portal</h1>
-        <p className="text-xl text-muted-foreground mb-8">
-          Connect, learn, and grow with your university community
-        </p>
-
+      <div className="max-w-6xl mx-auto mt-6">
         {sessionLoading || profileLoading ? (
           <div className="text-center p-4">Loading...</div>
         ) : !session ? (
-          <div className="space-x-4">
-            <Button onClick={() => navigate("/auth")}>Sign In</Button>
-            <Button variant="outline" onClick={() => navigate("/auth")}>
-              Create Account
-            </Button>
+          <div className="max-w-4xl mx-auto mt-12 text-center">
+            <h1 className="text-4xl font-bold mb-6">Welcome to University Portal</h1>
+            <p className="text-xl text-muted-foreground mb-8">
+              Connect, learn, and grow with your university community
+            </p>
+            <div className="space-x-4">
+              <Button onClick={() => navigate("/auth")}>Sign In</Button>
+              <Button variant="outline" onClick={() => navigate("/auth")}>
+                Create Account
+              </Button>
+            </div>
           </div>
         ) : (
-          <>
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold mb-2">
-                Hello, {userProfile?.full_name || userProfile?.username || 'University Member'}
-              </h2>
-              <p className="text-muted-foreground">
-                {userProfile?.role === 'student' && 'Student'}
-                {userProfile?.role === 'faculty' && 'Faculty Member'}
-                {userProfile?.role === 'admin' && 'Administrator'}
-                {userProfile?.role === 'club_coordinator' && 'Club Coordinator'}
-                {userProfile?.role === 'alumni' && 'Alumni'}
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <Button onClick={() => navigate("/discussions")}>
-                Join Discussions
-              </Button>
-              <Button onClick={() => navigate("/events")}>
-                Browse Events
-              </Button>
-              <Button onClick={() => navigate("/clubs")}>
-                Explore Clubs
-              </Button>
-              <Button onClick={() => navigate("/career")}>
-                Career Opportunities
-              </Button>
-              {userProfile?.role === 'faculty' && (
-                <Button onClick={() => navigate("/announcements")}>
-                  Manage Announcements
-                </Button>
-              )}
-              {userProfile?.role === 'alumni' && (
-                <Button onClick={() => navigate("/alumni")}>
-                  Alumni Network
-                </Button>
-              )}
-            </div>
-          </>
+          <Dashboard userProfile={userProfile} />
         )}
       </div>
       <ChatBot />

@@ -14,15 +14,29 @@ export function useResendCountdown(initialCountdown = 60) {
 
   const setResendError = useCallback((message: string) => {
     setErrorMessage(message);
+    
     // Extract seconds from error message if available (e.g., "...after 56 seconds")
-    const secondsMatch = message.match(/after (\d+) seconds/);
+    const secondsMatch = message.match(/after (\d+) seconds/i);
     if (secondsMatch && secondsMatch[1]) {
       const seconds = parseInt(secondsMatch[1], 10);
       if (!isNaN(seconds)) {
+        console.log(`Rate limit detected: ${seconds} seconds`);
         startResendCountdown(seconds);
         return;
       }
     }
+    
+    // Also check for "in X seconds" pattern (common in some APIs)
+    const inSecondsMatch = message.match(/in (\d+) seconds/i);
+    if (inSecondsMatch && inSecondsMatch[1]) {
+      const seconds = parseInt(inSecondsMatch[1], 10);
+      if (!isNaN(seconds)) {
+        console.log(`Rate limit detected: ${seconds} seconds`);
+        startResendCountdown(seconds);
+        return;
+      }
+    }
+    
     // Default fallback
     startResendCountdown();
   }, [startResendCountdown]);

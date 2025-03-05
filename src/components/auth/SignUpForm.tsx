@@ -48,8 +48,8 @@ export function SignUpForm() {
       const userRole = determineRoleFromEmail(email, role);
       const emailDomain = email.substring(email.indexOf('@'));
 
-      // IMPORTANT: Explicitly set type to 'signup' and force OTP
-      const { data, error: otpError } = await supabase.auth.signUp({
+      // IMPORTANT: First create the user account
+      const { data: userData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -57,14 +57,15 @@ export function SignUpForm() {
             role: userRole,
             email_domain: emailDomain,
           },
+          // Don't auto-confirm emails - we'll use OTP instead
           emailRedirectTo: window.location.origin + '/auth/callback'
         }
       });
 
-      if (otpError) throw otpError;
+      if (signUpError) throw signUpError;
 
       // Check if the user needs to verify their email
-      if (data?.user?.identities?.length === 0) {
+      if (userData?.user?.identities?.length === 0) {
         toast({
           title: "Account Exists",
           description: "An account with this email already exists. Please sign in instead.",
@@ -74,19 +75,23 @@ export function SignUpForm() {
         return;
       }
 
-      // Send OTP for verification - explicitly use OTP-based verification
-      const { error: phoneOtpError } = await supabase.auth.signInWithOtp({
+      console.log("User created successfully:", userData);
+      
+      // Explicitly send OTP for verification
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false
+          shouldCreateUser: false,
+          // Force OTP (numeric code) instead of magic link
+          emailRedirectTo: null,
         }
       });
 
-      if (phoneOtpError) throw phoneOtpError;
+      if (otpError) throw otpError;
 
       setVerificationStep(true);
       toast({
-        title: "OTP Sent",
+        title: "Verification Code Sent",
         description: `A verification code has been sent to ${email}. Please check your inbox and spam folder.`,
       });
       startResendCountdown();
@@ -97,7 +102,7 @@ export function SignUpForm() {
         description: errorMsg,
         variant: "destructive",
       });
-      console.error("OTP send error:", error);
+      console.error("Account creation or OTP send error:", error);
     } finally {
       setLoading(false);
     }
@@ -110,18 +115,20 @@ export function SignUpForm() {
     clearError();
     
     try {
-      // Try to resend the OTP explicitly with OTP
+      // Send OTP explicitly with options to force numeric code
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false
+          shouldCreateUser: false,
+          // Force OTP (numeric code) instead of magic link
+          emailRedirectTo: null,
         }
       });
 
       if (otpError) throw otpError;
 
       toast({
-        title: "OTP Resent",
+        title: "Code Resent",
         description: "A new verification code has been sent to your email. Please check your inbox and spam folder.",
       });
       startResendCountdown();
@@ -144,6 +151,7 @@ export function SignUpForm() {
     clearError();
 
     try {
+      // Verify the OTP code
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -153,15 +161,16 @@ export function SignUpForm() {
       if (verifyError) throw verifyError;
       
       toast({
-        title: "Success",
-        description: "Your account has been verified successfully.",
+        title: "Account Verified",
+        description: "Your account has been verified successfully. You can now sign in.",
       });
       
+      // Navigate to home page after successful verification
       navigate("/");
     } catch (error: any) {
       const errorMsg = error.message || "Failed to verify account";
       toast({
-        title: "Error",
+        title: "Verification Error",
         description: errorMsg,
         variant: "destructive",
       });

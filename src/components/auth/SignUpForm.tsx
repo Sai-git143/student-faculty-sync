@@ -44,46 +44,12 @@ export function SignUpForm() {
     }
 
     try {
-      // Determine appropriate role based on email domain
-      const userRole = determineRoleFromEmail(email, role);
-      const emailDomain = email.substring(email.indexOf('@'));
-
-      // IMPORTANT: First create the user account
-      const { data: userData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            role: userRole,
-            email_domain: emailDomain,
-          },
-          // Don't auto-confirm emails - we'll use OTP instead
-          emailRedirectTo: window.location.origin + '/auth/callback'
-        }
-      });
-
-      if (signUpError) throw signUpError;
-
-      // Check if the user needs to verify their email
-      if (userData?.user?.identities?.length === 0) {
-        toast({
-          title: "Account Exists",
-          description: "An account with this email already exists. Please sign in instead.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log("User created successfully:", userData);
-      
-      // Explicitly send OTP for verification
+      // Skip creating user account first, directly send OTP
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false,
-          // Force OTP (numeric code) instead of magic link
-          emailRedirectTo: null,
+          shouldCreateUser: true, // Create user if they don't exist
+          emailRedirectTo: null, // Force numeric code instead of magic link
         }
       });
 
@@ -102,7 +68,7 @@ export function SignUpForm() {
         description: errorMsg,
         variant: "destructive",
       });
-      console.error("Account creation or OTP send error:", error);
+      console.error("OTP send error:", error);
     } finally {
       setLoading(false);
     }
@@ -119,9 +85,8 @@ export function SignUpForm() {
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false,
-          // Force OTP (numeric code) instead of magic link
-          emailRedirectTo: null,
+          shouldCreateUser: true,
+          emailRedirectTo: null, // Force OTP (numeric code)
         }
       });
 
@@ -151,18 +116,25 @@ export function SignUpForm() {
     clearError();
 
     try {
-      // Verify the OTP code
+      // Verify the OTP code and set password
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'email'
+        type: 'signup',
+        options: {
+          data: {
+            password,
+            role: determineRoleFromEmail(email, role),
+            email_domain: email.substring(email.indexOf('@')),
+          }
+        }
       });
 
       if (verifyError) throw verifyError;
       
       toast({
-        title: "Account Verified",
-        description: "Your account has been verified successfully. You can now sign in.",
+        title: "Account Created",
+        description: "Your account has been created successfully. You are now signed in.",
       });
       
       // Navigate to home page after successful verification

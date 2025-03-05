@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Calendar, 
@@ -6,7 +5,7 @@ import {
   Zap,
   CheckCircle2
 } from "lucide-react";
-import { RealtimeAnnouncements } from "@/components/RealtimeAnnouncements";
+import { RealtimeAnnouncements } from "@/components/announcements/RealtimeAnnouncements";
 
 export function OverviewTab() {
   return (

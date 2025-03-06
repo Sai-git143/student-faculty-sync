@@ -30,6 +30,12 @@ export function VerificationForm({
   onResendOtp,
   onBack
 }: VerificationFormProps) {
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow digits and limit to 4 characters
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setOtp(value);
+  };
+
   return (
     <form onSubmit={onVerify} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-md mb-4">
@@ -38,7 +44,7 @@ export function VerificationForm({
           <div>
             <h3 className="text-sm font-medium">Verification code sent</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              We've sent a verification code to {email}
+              We've sent a 4-digit verification code to {email}
             </p>
           </div>
         </div>
@@ -53,18 +59,25 @@ export function VerificationForm({
       
       <div className="space-y-2">
         <label htmlFor="otp" className="text-sm font-medium">
-          Enter verification code
+          Enter 4-digit verification code
         </label>
         <Input
           id="otp"
           type="text"
-          placeholder="6-digit code"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={4}
+          placeholder="4-digit code"
           value={otp}
-          onChange={(e) => setOtp(e.target.value.trim())}
+          onChange={handleOtpChange}
+          className="text-center text-lg tracking-widest"
           required
         />
+        <p className="text-xs text-muted-foreground">
+          Enter the 4-digit code we sent to your email
+        </p>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full" disabled={loading || otp.length !== 4}>
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

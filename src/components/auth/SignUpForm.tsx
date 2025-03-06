@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { SignUpInitialForm } from "./SignUpInitialForm";
 import { VerificationForm } from "./VerificationForm";
-import { validateEmail, determineRoleFromEmail, handleOtpError } from "@/utils/emailValidation";
+import { validateEmail, determineRoleFromEmail, handleOtpError, generateOtpCode } from "@/utils/emailValidation";
 import { useResendCountdown } from "@/hooks/useResendCountdown";
 
 export function SignUpForm() {
@@ -15,6 +15,7 @@ export function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [verificationStep, setVerificationStep] = useState(false);
   const [otp, setOtp] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -43,26 +44,30 @@ export function SignUpForm() {
     }
 
     try {
-      console.log("Sending OTP to:", email);
-      const { data, error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+      // Generate a 4-digit OTP code
+      const newOtp = generateOtpCode();
+      setGeneratedOtp(newOtp);
+      
+      console.log("Sending 4-digit OTP to:", email);
+      console.log("Generated OTP code:", newOtp);
+      
+      // Use custom email template with OTP code
+      const { error: emailError } = await supabase.functions.invoke('send-otp-email', {
+        body: { 
+          email, 
+          otpCode: newOtp
         }
       });
-
-      console.log("OTP response:", data);
       
-      if (otpError) {
-        console.error("OTP error:", otpError);
-        throw otpError;
+      if (emailError) {
+        console.error("Error sending OTP email:", emailError);
+        throw emailError;
       }
-
+      
       setVerificationStep(true);
       toast({
         title: "Verification Code Sent",
-        description: `A verification code has been sent to ${email}. Please check your inbox and spam folder.`,
+        description: `A 4-digit verification code has been sent to ${email}. Please check your inbox and spam folder.`,
       });
       startResendCountdown();
     } catch (error: any) {
@@ -85,22 +90,26 @@ export function SignUpForm() {
     clearError();
     
     try {
-      console.log("Resending OTP to:", email);
-      const { data, error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+      // Generate a new 4-digit OTP code
+      const newOtp = generateOtpCode();
+      setGeneratedOtp(newOtp);
+      
+      console.log("Resending 4-digit OTP to:", email);
+      console.log("New generated OTP code:", newOtp);
+      
+      // Use custom email template with OTP code
+      const { error: emailError } = await supabase.functions.invoke('send-otp-email', {
+        body: { 
+          email, 
+          otpCode: newOtp
         }
       });
       
-      console.log("Resend OTP response:", data);
-
-      if (otpError) {
-        console.error("Resend OTP error:", otpError);
-        throw otpError;
+      if (emailError) {
+        console.error("Error resending OTP email:", emailError);
+        throw emailError;
       }
-
+      
       toast({
         title: "Code Resent",
         description: "A new verification code has been sent to your email. Please check your inbox and spam folder.",
@@ -125,34 +134,33 @@ export function SignUpForm() {
     clearError();
 
     try {
-      console.log("Verifying OTP:", otp, "for email:", email);
-      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'signup',
-      });
+      console.log("Verifying OTP input:", otp);
+      console.log("Against generated OTP:", generatedOtp);
       
-      console.log("OTP verification response:", verifyData);
-
-      if (verifyError) {
-        console.error("Verify OTP error:", verifyError);
-        throw verifyError;
+      // Check if the entered OTP matches the generated OTP
+      if (otp !== generatedOtp) {
+        throw new Error("Invalid verification code. Please check and try again.");
       }
       
-      console.log("Updating user with password and metadata");
-      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+      console.log("OTP verified successfully. Creating account...");
+      
+      // Create user with email and password
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
         password,
-        data: {
-          role: determineRoleFromEmail(email, role),
-          email_domain: email.substring(email.indexOf('@')),
+        options: {
+          data: {
+            role: determineRoleFromEmail(email, role),
+            email_domain: email.substring(email.indexOf('@')),
+          }
         }
       });
       
-      console.log("Update user response:", updateData);
+      console.log("Sign up response:", signUpData);
       
-      if (updateError) {
-        console.error("Update user error:", updateError);
-        throw updateError;
+      if (signUpError) {
+        console.error("Sign up error:", signUpError);
+        throw signUpError;
       }
       
       toast({

@@ -77,3 +77,10 @@ export const handleOtpError = (error: any): string => {
   // Default error message
   return error.message || "Failed to send verification code. Please try again.";
 };
+
+/**
+ * Generate a random 4-digit OTP code
+ */
+export const generateOtpCode = (): string => {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+};

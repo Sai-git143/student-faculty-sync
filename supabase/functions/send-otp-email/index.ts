@@ -21,9 +21,13 @@ serve(async (req) => {
   }
 
   try {
-    const { email, otpCode } = (await req.json()) as EmailRequest;
+    const requestData = await req.json();
+    const { email, otpCode } = requestData as EmailRequest;
+    
+    console.log("Received request data:", requestData);
 
     if (!email || !otpCode) {
+      console.error("Missing required fields:", { email, otpCode });
       return new Response(
         JSON.stringify({ error: 'Email and OTP code are required' }),
         {
@@ -38,6 +42,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase URL or service role key");
       throw new Error('Missing Supabase URL or service role key');
     }
 
@@ -58,8 +63,12 @@ serve(async (req) => {
       </html>
     `;
 
+    console.log(`Preparing to send email to ${email} with OTP code ${otpCode}`);
+
     // Send email using Supabase Edge Functions Runtime API
     const emailEndpoint = `${supabaseUrl}/functions/v1/send-email`;
+    console.log(`Sending request to endpoint: ${emailEndpoint}`);
+    
     const response = await fetch(emailEndpoint, {
       method: 'POST',
       headers: {
@@ -73,12 +82,22 @@ serve(async (req) => {
       }),
     });
 
+    console.log(`Email endpoint responded with status: ${response.status}`);
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error sending email:', errorData);
-      throw new Error('Failed to send email: ' + JSON.stringify(errorData));
+      let errorData;
+      try {
+        errorData = await response.text();
+        console.error('Error from email service:', errorData);
+      } catch (err) {
+        console.error('Could not parse error response:', err);
+      }
+      
+      throw new Error(`Failed to send email: ${errorData || response.statusText}`);
     }
 
+    console.log("OTP email sent successfully");
+    
     return new Response(
       JSON.stringify({ success: true, message: 'OTP email sent successfully' }),
       {

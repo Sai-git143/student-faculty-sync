@@ -48,12 +48,14 @@ export function useOtpVerification() {
       console.log("Generated OTP code:", newOtp);
       
       // Use custom email template with OTP code
-      const { error: emailError } = await supabase.functions.invoke('send-otp-email', {
+      const { error: emailError, data } = await supabase.functions.invoke('send-otp-email', {
         body: { 
           email, 
           otpCode: newOtp
         }
       });
+      
+      console.log("Email function response:", data);
       
       if (emailError) {
         console.error("Error sending OTP email:", emailError);
@@ -94,12 +96,14 @@ export function useOtpVerification() {
       console.log("New generated OTP code:", newOtp);
       
       // Use custom email template with OTP code
-      const { error: emailError } = await supabase.functions.invoke('send-otp-email', {
+      const { error: emailError, data } = await supabase.functions.invoke('send-otp-email', {
         body: { 
           email, 
           otpCode: newOtp
         }
       });
+      
+      console.log("Resend email function response:", data);
       
       if (emailError) {
         console.error("Error resending OTP email:", emailError);
@@ -119,6 +123,7 @@ export function useOtpVerification() {
         description: errorMsg,
         variant: "destructive",
       });
+      console.error("OTP resend error:", error);
     } finally {
       setLoading(false);
     }

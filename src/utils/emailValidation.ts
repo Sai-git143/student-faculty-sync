@@ -7,6 +7,7 @@ export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) return false;
   
+  // Check for allowed domains
   return email.endsWith('@university.edu') || 
          email.endsWith('@admin.university.edu') ||
          email.endsWith('@faculty.university.edu') ||
@@ -39,7 +40,7 @@ export const determineRoleFromEmail = (email: string, selectedRole: string): str
  * Handles Supabase OTP errors and returns user-friendly messages
  */
 export const handleOtpError = (error: any): string => {
-  console.error("OTP error:", error);
+  console.error("OTP error details:", error);
   
   // Rate limit error
   if (error.code === "too_many_requests" || 

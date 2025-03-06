@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
@@ -42,15 +43,21 @@ export function SignUpForm() {
     }
 
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      console.log("Sending OTP to:", email);
+      const { data, error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: null,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       });
 
-      if (otpError) throw otpError;
+      console.log("OTP response:", data);
+      
+      if (otpError) {
+        console.error("OTP error:", otpError);
+        throw otpError;
+      }
 
       setVerificationStep(true);
       toast({
@@ -78,15 +85,21 @@ export function SignUpForm() {
     clearError();
     
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      console.log("Resending OTP to:", email);
+      const { data, error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: null,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       });
+      
+      console.log("Resend OTP response:", data);
 
-      if (otpError) throw otpError;
+      if (otpError) {
+        console.error("Resend OTP error:", otpError);
+        throw otpError;
+      }
 
       toast({
         title: "Code Resent",
@@ -112,15 +125,22 @@ export function SignUpForm() {
     clearError();
 
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      console.log("Verifying OTP:", otp, "for email:", email);
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
         type: 'signup',
       });
-
-      if (verifyError) throw verifyError;
       
-      const { error: updateError } = await supabase.auth.updateUser({
+      console.log("OTP verification response:", verifyData);
+
+      if (verifyError) {
+        console.error("Verify OTP error:", verifyError);
+        throw verifyError;
+      }
+      
+      console.log("Updating user with password and metadata");
+      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
         password,
         data: {
           role: determineRoleFromEmail(email, role),
@@ -128,7 +148,12 @@ export function SignUpForm() {
         }
       });
       
-      if (updateError) throw updateError;
+      console.log("Update user response:", updateData);
+      
+      if (updateError) {
+        console.error("Update user error:", updateError);
+        throw updateError;
+      }
       
       toast({
         title: "Account Created",
@@ -144,6 +169,7 @@ export function SignUpForm() {
         variant: "destructive",
       });
       setResendError(errorMsg);
+      console.error("Verification process error:", error);
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
@@ -32,7 +31,6 @@ export function SignUpForm() {
     setLoading(true);
     clearError();
 
-    // Validate email
     if (!validateEmail(email)) {
       toast({
         title: "Invalid Email",
@@ -44,12 +42,11 @@ export function SignUpForm() {
     }
 
     try {
-      // Skip creating user account first, directly send OTP
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true, // Create user if they don't exist
-          emailRedirectTo: null, // Force numeric code instead of magic link
+          shouldCreateUser: true,
+          emailRedirectTo: null,
         }
       });
 
@@ -81,12 +78,11 @@ export function SignUpForm() {
     clearError();
     
     try {
-      // Send OTP explicitly with options to force numeric code
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: true,
-          emailRedirectTo: null, // Force OTP (numeric code)
+          emailRedirectTo: null,
         }
       });
 
@@ -116,28 +112,29 @@ export function SignUpForm() {
     clearError();
 
     try {
-      // Verify the OTP code and set password
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
         type: 'signup',
-        options: {
-          data: {
-            password,
-            role: determineRoleFromEmail(email, role),
-            email_domain: email.substring(email.indexOf('@')),
-          }
-        }
       });
 
       if (verifyError) throw verifyError;
+      
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+        data: {
+          role: determineRoleFromEmail(email, role),
+          email_domain: email.substring(email.indexOf('@')),
+        }
+      });
+      
+      if (updateError) throw updateError;
       
       toast({
         title: "Account Created",
         description: "Your account has been created successfully. You are now signed in.",
       });
       
-      // Navigate to home page after successful verification
       navigate("/");
     } catch (error: any) {
       const errorMsg = error.message || "Failed to verify account";

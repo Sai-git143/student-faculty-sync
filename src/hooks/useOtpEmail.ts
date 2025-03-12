@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateOtpCode, handleOtpError } from "@/utils/emailValidation";
@@ -45,7 +44,7 @@ export function useOtpEmail() {
         toast({
           title: "Warning",
           description: `You have ${data.rateLimitInfo.remainingAttempts} attempts remaining before timeout.`,
-          variant: "warning",
+          variant: "destructive",
         });
       }
     }

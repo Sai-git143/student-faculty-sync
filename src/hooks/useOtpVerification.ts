@@ -59,7 +59,7 @@ export function useOtpVerification() {
         toast({
           title: "Note",
           description: `You have ${rateLimitInfo.remainingAttempts} verification attempts remaining.`,
-          variant: "warning",
+          variant: "destructive", // Changed from "warning" to "destructive"
         });
       }
     }
@@ -117,3 +117,4 @@ export function useOtpVerification() {
     handleVerifyOtp
   };
 }
+

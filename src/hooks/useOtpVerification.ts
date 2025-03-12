@@ -19,6 +19,7 @@ export function useOtpVerification() {
     resendDisabled,
     countdown,
     errorMessage,
+    rateLimitInfo,
     sendOtpEmail,
     resendOtpEmail,
     clearError
@@ -44,14 +45,32 @@ export function useOtpVerification() {
       return;
     }
 
-    const success = await sendOtpEmail(email);
+    const success = await sendOtpEmail(email, {
+      metadata: {
+        userName: email.split('@')[0],
+      }
+    });
+    
     if (success) {
       setVerificationStep(true);
+      
+      // Show remaining attempts if provided
+      if (rateLimitInfo && rateLimitInfo.remainingAttempts <= 2) {
+        toast({
+          title: "Note",
+          description: `You have ${rateLimitInfo.remainingAttempts} verification attempts remaining.`,
+          variant: "warning",
+        });
+      }
     }
   };
 
   const handleResendOtp = async () => {
-    await resendOtpEmail(email);
+    await resendOtpEmail(email, {
+      metadata: {
+        userName: email.split('@')[0],
+      }
+    });
   };
 
   const handleVerifyOtp = async (e: React.FormEvent, navigate: any) => {
@@ -62,7 +81,6 @@ export function useOtpVerification() {
       console.log("Verifying OTP input:", otp);
       console.log("Against generated OTP:", generatedOtp);
       
-      // Check if the entered OTP matches the generated OTP
       if (otp !== generatedOtp) {
         throw new Error("Invalid verification code. Please check and try again.");
       }

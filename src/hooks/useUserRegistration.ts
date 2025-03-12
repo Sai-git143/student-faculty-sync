@@ -12,9 +12,8 @@ export function useUserRegistration() {
     setLoading(true);
     
     try {
-      console.log("Creating account...");
+      console.log("Creating account for:", email);
       
-      // Create user with email and password
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -26,18 +25,19 @@ export function useUserRegistration() {
         }
       });
       
-      console.log("Sign up response:", signUpData);
-      
       if (signUpError) {
         console.error("Sign up error:", signUpError);
         throw signUpError;
       }
       
+      console.log("Account created successfully:", signUpData);
+      
       toast({
-        title: "Account Created",
-        description: "Your account has been created successfully. You are now signed in.",
+        title: "Success",
+        description: "Your account has been created successfully. You can now sign in.",
       });
       
+      // Navigate to home page
       navigate("/");
       return true;
     } catch (error: any) {
